@@ -1,0 +1,116 @@
+---
+source: crates/biome_js_analyze/tests/spec_tests.rs
+expression: invalid.js
+---
+# Input
+```js
+/* should generate diagnostics */
+const foo = require('is-number');
+
+import foo from 'is-number';
+
+const foo = await import('is-number');
+
+import foo from 'object.entries';
+
+import foo from 'npm-run-all';
+
+```
+
+# Diagnostics
+```
+invalid.js:2:21 lint/nursery/noBannedDependencies ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The dependency is-number should be replaced with inline or local logic.
+  
+    1 │ /* should generate diagnostics */
+  > 2 │ const foo = require('is-number');
+      │                     ^^^^^^^^^^^
+    3 │ 
+    4 │ import foo from 'is-number';
+  
+  i You can check if a value is a number by using `typeof` or coercing it to a number and using `Number.isFinite`.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.js:4:17 lint/nursery/noBannedDependencies ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The dependency is-number should be replaced with inline or local logic.
+  
+    2 │ const foo = require('is-number');
+    3 │ 
+  > 4 │ import foo from 'is-number';
+      │                 ^^^^^^^^^^^
+    5 │ 
+    6 │ const foo = await import('is-number');
+  
+  i You can check if a value is a number by using `typeof` or coercing it to a number and using `Number.isFinite`.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.js:6:26 lint/nursery/noBannedDependencies ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The dependency is-number should be replaced with inline or local logic.
+  
+    4 │ import foo from 'is-number';
+    5 │ 
+  > 6 │ const foo = await import('is-number');
+      │                          ^^^^^^^^^^^
+    7 │ 
+    8 │ import foo from 'object.entries';
+  
+  i You can check if a value is a number by using `typeof` or coercing it to a number and using `Number.isFinite`.
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.js:8:17 lint/nursery/noBannedDependencies ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The dependency object.entries should be replaced with native functionality.
+  
+     6 │ const foo = await import('is-number');
+     7 │ 
+   > 8 │ import foo from 'object.entries';
+       │                 ^^^^^^^^^^^^^^^^
+     9 │ 
+    10 │ import foo from 'npm-run-all';
+  
+  i Use Object.entries instead.
+  
+  i Read more: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/entries
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```
+
+```
+invalid.js:10:17 lint/nursery/noBannedDependencies ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i The dependency npm-run-all should be replaced with an alternative package.
+  
+     8 │ import foo from 'object.entries';
+     9 │ 
+  > 10 │ import foo from 'npm-run-all';
+       │                 ^^^^^^^^^^^^^
+    11 │ 
+  
+  i Prefer npm-run-all2 for this use case.
+  
+  i Read more: https://e18e.dev/docs/replacements/npm-run-all
+  
+  i This rule belongs to the nursery group, which means it is not yet stable and may change in the future. Visit https://biomejs.dev/linter/#nursery for more information.
+  
+
+```

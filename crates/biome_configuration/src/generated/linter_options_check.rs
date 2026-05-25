@@ -76,6 +76,11 @@ pub fn config_side_rule_options_types() -> Vec<(&'static str, &'static str, Type
         TypeId::of::<biome_rule_options::no_await_in_loops::NoAwaitInLoopsOptions>(),
     ));
     result.push((
+        "nursery",
+        "noBannedDependencies",
+        TypeId::of::<biome_rule_options::no_banned_dependencies::NoBannedDependenciesOptions>(),
+    ));
+    result.push((
         "complexity",
         "noBannedTypes",
         TypeId::of::<biome_rule_options::no_banned_types::NoBannedTypesOptions>(),

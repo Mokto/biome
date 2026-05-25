@@ -2037,6 +2037,11 @@ See https://biomejs.dev/linter/rules/no-ambiguous-anchor-text
 	 */
 	noAmbiguousAnchorText?: NoAmbiguousAnchorTextConfiguration;
 	/**
+	* Disallow dependencies that are known to have better alternatives.
+See https://biomejs.dev/linter/rules/no-banned-dependencies 
+	 */
+	noBannedDependencies?: NoBannedDependenciesConfiguration;
+	/**
 	* Require stringification to avoid values that only use the default object representation.
 See https://biomejs.dev/linter/rules/no-base-to-string 
 	 */
@@ -4291,6 +4296,9 @@ export type UseYieldConfiguration =
 export type NoAmbiguousAnchorTextConfiguration =
 	| RulePlainConfiguration
 	| RuleWithNoAmbiguousAnchorTextOptions;
+export type NoBannedDependenciesConfiguration =
+	| RulePlainConfiguration
+	| RuleWithNoBannedDependenciesOptions;
 export type NoBaseToStringConfiguration =
 	| RulePlainConfiguration
 	| RuleWithNoBaseToStringOptions;
@@ -6057,6 +6065,10 @@ export interface RuleWithUseYieldOptions {
 export interface RuleWithNoAmbiguousAnchorTextOptions {
 	level: RulePlainConfiguration;
 	options?: NoAmbiguousAnchorTextOptions;
+}
+export interface RuleWithNoBannedDependenciesOptions {
+	level: RulePlainConfiguration;
+	options?: NoBannedDependenciesOptions;
 }
 export interface RuleWithNoBaseToStringOptions {
 	level: RulePlainConfiguration;
@@ -7877,6 +7889,7 @@ export interface NoAmbiguousAnchorTextOptions {
 	 */
 	words?: string[];
 }
+export type NoBannedDependenciesOptions = {};
 export interface NoBaseToStringOptions {
 	ignoredTypeNames?: string[];
 }
@@ -9183,6 +9196,7 @@ export type Category =
 	| "lint/correctness/useValidTypeof"
 	| "lint/correctness/useYield"
 	| "lint/nursery/noAmbiguousAnchorText"
+	| "lint/nursery/noBannedDependencies"
 	| "lint/nursery/noBaseToString"
 	| "lint/nursery/noBeforeInteractiveScriptOutsideDocument"
 	| "lint/nursery/noColorInvalidHex"

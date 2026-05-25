@@ -2794,6 +2794,16 @@
 			"type": "object",
 			"additionalProperties": false
 		},
+		"NoBannedDependenciesConfiguration": {
+			"oneOf": [
+				{ "$ref": "#/$defs/RulePlainConfiguration" },
+				{ "$ref": "#/$defs/RuleWithNoBannedDependenciesOptions" }
+			]
+		},
+		"NoBannedDependenciesOptions": {
+			"type": "object",
+			"additionalProperties": false
+		},
 		"NoBannedTypesConfiguration": {
 			"oneOf": [
 				{ "$ref": "#/$defs/RulePlainConfiguration" },
@@ -6141,6 +6151,13 @@
 						{ "type": "null" }
 					]
 				},
+				"noBannedDependencies": {
+					"description": "Disallow dependencies that are known to have better alternatives.\nSee https://biomejs.dev/linter/rules/no-banned-dependencies",
+					"anyOf": [
+						{ "$ref": "#/$defs/NoBannedDependenciesConfiguration" },
+						{ "type": "null" }
+					]
+				},
 				"noBaseToString": {
 					"description": "Require stringification to avoid values that only use the default object representation.\nSee https://biomejs.dev/linter/rules/no-base-to-string",
 					"anyOf": [
@@ -7859,6 +7876,15 @@
 			"properties": {
 				"level": { "$ref": "#/$defs/RulePlainConfiguration" },
 				"options": { "$ref": "#/$defs/NoAwaitInLoopsOptions" }
+			},
+			"additionalProperties": false,
+			"required": ["level"]
+		},
+		"RuleWithNoBannedDependenciesOptions": {
+			"type": "object",
+			"properties": {
+				"level": { "$ref": "#/$defs/RulePlainConfiguration" },
+				"options": { "$ref": "#/$defs/NoBannedDependenciesOptions" }
 			},
 			"additionalProperties": false,
 			"required": ["level"]

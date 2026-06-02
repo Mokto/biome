@@ -576,11 +576,17 @@ impl<'src> HtmlLexer<'src> {
                     let checkpoint_pos = self.position;
                     let prev_byte = self.prev_byte();
                     if let Some(keyword_kind) = self.consume_language_identifier(current) {
-                        // Check if this keyword is in our stop list
                         let should_stop =
                             kind.matches_keyword(keyword_kind) && prev_byte == Some(b' ');
 
-                        if should_stop {
+                        // `as const` is a Svelte-specific TS assertion in `{#each}`;
+                        // keep scanning so the real binding `as` (which follows it)
+                        // is the one that stops us.
+                        let is_as_const = should_stop
+                            && keyword_kind == AS_KW
+                            && self.peek_keyword_after_space() == Some(CONST_KW);
+
+                        if should_stop && !is_as_const {
                             // Rewind - don't consume the keyword
                             self.position = checkpoint_pos;
                             break;
@@ -786,6 +792,21 @@ impl<'src> HtmlLexer<'src> {
     #[inline]
     fn assert_at_char_boundary(&self) {
         debug_assert!(self.source.is_char_boundary(self.position));
+    }
+
+    /// Peeks the next language keyword after horizontal whitespace, without
+    /// advancing the lexer position. Returns `None` if no keyword follows.
+    fn peek_keyword_after_space(&mut self) -> Option<HtmlSyntaxKind> {
+        let save = self.position;
+        while self.current_byte().is_some_and(|b| b.is_ascii_whitespace()) {
+            self.position += 1;
+        }
+        let kind = self
+            .current_byte()
+            .filter(|b| is_at_start_identifier(*b))
+            .and_then(|b| self.consume_language_identifier(b));
+        self.position = save;
+        kind
     }
 
     /// Attempts to consume HTML-ish languages identifiers. If none is found, the function

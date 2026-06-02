@@ -531,7 +531,12 @@ impl WorkspaceServer {
                 };
                 // Only process non-source snippets (templates)
                 if !js_file_source.is_embedded_source() {
-                    let mut builder = value_references.builder();
+                    let is_svelte = js_file_source.as_embedding_kind().is_svelte();
+                    let mut builder = if is_svelte {
+                        value_references.svelte_builder()
+                    } else {
+                        value_references.builder()
+                    };
                     builder.visit_non_source_snippet(&js_snippet.parse.tree());
                     value_references.finish(builder);
                 }
@@ -1706,7 +1711,12 @@ impl Workspace for WorkspaceServer {
                 };
                 // Only process non-source snippets (templates)
                 if !js_file_source.is_embedded_source() {
-                    let mut builder = value_references.builder();
+                    let is_svelte = js_file_source.as_embedding_kind().is_svelte();
+                    let mut builder = if is_svelte {
+                        value_references.svelte_builder()
+                    } else {
+                        value_references.builder()
+                    };
                     builder.visit_non_source_snippet(&js_snippet.parse.tree());
                     value_references.finish(builder);
                 }

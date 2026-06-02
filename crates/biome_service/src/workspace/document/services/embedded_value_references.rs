@@ -6,7 +6,20 @@ use biome_js_syntax::{
     AnyJsIdentifierUsage, AnyJsRoot, JsReferenceIdentifier, JsStaticMemberExpression,
     JsxReferenceIdentifier,
 };
-use biome_rowan::{AstNode, TextRange, TokenText, WalkEvent};
+use biome_rowan::{AstNode, TextRange, TextSize, TokenText, WalkEvent};
+
+/// Svelte runes: built-in identifiers starting with `$` that are not store
+/// subscriptions and must not have their `$` prefix stripped when resolving
+/// the underlying store binding name.
+const SVELTE_RUNES: &[&str] = &[
+    "$bindable",
+    "$derived",
+    "$effect",
+    "$host",
+    "$inspect",
+    "$props",
+    "$state",
+];
 
 #[derive(Debug, Clone, Default)]
 pub struct EmbeddedValueReferences {
@@ -20,11 +33,18 @@ pub struct EmbeddedValueReferences {
 pub(crate) struct EmbeddedValueReferencesBuilder {
     value_references: Vec<(TextRange, TokenText)>,
     type_references: Vec<(TextRange, TokenText)>,
+    /// When true, `$store`-style references from Svelte templates also register
+    /// the un-prefixed name so that the bound variable (`store`) is seen as used.
+    svelte_mode: bool,
 }
 
 impl EmbeddedValueReferences {
     pub(crate) fn builder(&self) -> EmbeddedValueReferencesBuilder {
         EmbeddedValueReferencesBuilder::new()
+    }
+
+    pub(crate) fn svelte_builder(&self) -> EmbeddedValueReferencesBuilder {
+        EmbeddedValueReferencesBuilder::new_svelte()
     }
 
     pub(crate) fn finish(&mut self, builder: EmbeddedValueReferencesBuilder) {
@@ -38,6 +58,15 @@ impl EmbeddedValueReferencesBuilder {
         Self {
             value_references: Vec::default(),
             type_references: Vec::default(),
+            svelte_mode: false,
+        }
+    }
+
+    fn new_svelte() -> Self {
+        Self {
+            value_references: Vec::default(),
+            type_references: Vec::default(),
+            svelte_mode: true,
         }
     }
 
@@ -232,6 +261,7 @@ impl EmbeddedValueReferencesBuilder {
     fn visit_reference_identifier(&mut self, reference: JsReferenceIdentifier) -> Option<()> {
         let usage = AnyJsIdentifierUsage::from(reference.clone());
         let name_token = reference.value_token().ok()?;
+        let name = name_token.text_trimmed();
         // Classify by how the reference is used here, not what it declares: a
         // name in type position (`x: Foo`) goes to the type list, as a value
         // (`new Foo()`) to the value list. Used both ways, it lands in both.
@@ -245,6 +275,27 @@ impl EmbeddedValueReferencesBuilder {
                 name_token.text_trimmed_range(),
                 name_token.token_text_trimmed(),
             );
+            // In Svelte templates, `$store` is auto-subscription syntax: the
+            // identifier `$store` in the template refers to the binding `store`
+            // declared in the script.  Register the bare `store` name so that
+            // `is_used_as_value("store")` returns true and the variable is not
+            // flagged as unused by `noUnusedVariables`.
+            if self.svelte_mode
+                && !SVELTE_RUNES.contains(&name)
+                && let Some(store_name) = name.strip_prefix('$')
+                && !store_name.is_empty()
+                && !store_name.starts_with('$')
+            {
+                // Build a TokenText representing only the store name (the `$`-
+                // stripped slice) by slicing the existing token text.  The
+                // range is relative to the token's own text, so byte 1 is
+                // where the un-prefixed name starts.
+                let store_text = name_token.token_text_trimmed().slice(TextRange::new(
+                    TextSize::from(1),
+                    TextSize::from(store_name.len() as u32 + 1),
+                ));
+                self.register_reference(name_token.text_trimmed_range(), store_text);
+            }
         }
         Some(())
     }
@@ -419,5 +470,75 @@ mod tests {
         service.finish(builder);
 
         assert!(!contains_reference(&service, "value"));
+    }
+
+    #[test]
+    fn svelte_store_subscription_in_template_marks_binding_used() {
+        // When `$errors` appears in a Svelte template snippet (non-source),
+        // the builder must also register `errors` so that the script-side
+        // binding `const { errors } = superForm(...)` is not flagged as unused.
+        let source = r#"$errors.email"#;
+
+        let mut service = EmbeddedValueReferences::default();
+        let mut builder = service.svelte_builder();
+        builder.visit_non_source_snippet(&parse_js(source));
+        service.finish(builder);
+
+        // Both the raw `$errors` and the store name `errors` must be tracked.
+        assert!(
+            contains_reference(&service, "$errors"),
+            "expected $errors to be registered"
+        );
+        assert!(
+            contains_reference(&service, "errors"),
+            "expected errors (store name) to be registered"
+        );
+    }
+
+    #[test]
+    fn svelte_runes_are_not_stripped() {
+        // Svelte runes like `$state`, `$props` etc. are NOT store subscriptions
+        // and their prefix must NOT be stripped.
+        let rune_sources = [
+            "$state",
+            "$derived",
+            "$effect",
+            "$props",
+            "$bindable",
+            "$inspect",
+            "$host",
+        ];
+
+        for rune in &rune_sources {
+            let source = format!("{rune}");
+            let mut service = EmbeddedValueReferences::default();
+            let mut builder = service.svelte_builder();
+            builder.visit_non_source_snippet(&parse_js(&source));
+            service.finish(builder);
+
+            let stripped = rune.strip_prefix('$').unwrap();
+            assert!(
+                !contains_reference(&service, stripped),
+                "rune {rune} should not register stripped name '{stripped}'"
+            );
+        }
+    }
+
+    #[test]
+    fn non_svelte_mode_does_not_strip_dollar_prefix() {
+        // In non-Svelte mode the `$` is just part of the identifier and must
+        // not be stripped.
+        let source = r#"$errors"#;
+
+        let mut service = EmbeddedValueReferences::default();
+        let mut builder = service.builder(); // plain builder, not svelte
+        builder.visit_non_source_snippet(&parse_js(source));
+        service.finish(builder);
+
+        assert!(contains_reference(&service, "$errors"));
+        assert!(
+            !contains_reference(&service, "errors"),
+            "non-svelte mode must not strip $ prefix"
+        );
     }
 }

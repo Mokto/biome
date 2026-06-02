@@ -69,6 +69,10 @@ export interface Configuration {
 	 */
 	overrides?: Overrides;
 	/**
+	 * List of plugins to load.
+	 */
+	plugins?: Plugins;
+	/**
 	* Indicates whether this configuration file is at the root of a Biome
 project. By default, this is `true`. 
 	 */
@@ -358,6 +362,7 @@ match these patterns.
 	rules?: Rules;
 }
 export type Overrides = OverridePattern[];
+export type Plugins = PluginConfiguration[];
 export type Bool = boolean;
 /**
  * Set of properties to integrate Biome with a VCS software.
@@ -968,7 +973,12 @@ match these patterns.
 	 * Specific configuration for the Json language
 	 */
 	linter?: OverrideLinterConfiguration;
+	/**
+	 * Specific configuration for additional plugins
+	 */
+	plugins?: Plugins;
 }
+export type PluginConfiguration = string;
 export type VcsClientKind = "git";
 /**
  * A list of rules that belong to this group
@@ -1069,6 +1079,7 @@ export type RuleDomain =
 	| "solid"
 	| "next"
 	| "qwik"
+	| "svelte"
 	| "vue"
 	| "project"
 	| "tailwind"
@@ -2382,7 +2393,7 @@ See https://biomejs.dev/linter/rules/no-unknown-attribute
 	 */
 	noUnknownAttribute?: NoUnknownAttributeConfiguration;
 	/**
-	* Disallow unnecessary type-based conditions that can be statically determined as redundant.
+	* Disallow conditions that always evaluate to the same value.
 See https://biomejs.dev/linter/rules/no-unnecessary-conditions 
 	 */
 	noUnnecessaryConditions?: NoUnnecessaryConditionsConfiguration;
@@ -2645,6 +2656,11 @@ See https://biomejs.dev/linter/rules/use-spread
 See https://biomejs.dev/linter/rules/use-string-starts-ends-with 
 	 */
 	useStringStartsEndsWith?: UseStringStartsEndsWithConfiguration;
+	/**
+	* Require keyed {#each} blocks in Svelte templates.
+See https://biomejs.dev/linter/rules/use-svelte-require-each-key 
+	 */
+	useSvelteRequireEachKey?: UseSvelteRequireEachKeyConfiguration;
 	/**
 	* Enforce that test lifecycle hooks are declared in the order they execute.
 See https://biomejs.dev/linter/rules/use-test-hooks-in-order 
@@ -4654,6 +4670,9 @@ export type UseSpreadConfiguration =
 export type UseStringStartsEndsWithConfiguration =
 	| RulePlainConfiguration
 	| RuleWithUseStringStartsEndsWithOptions;
+export type UseSvelteRequireEachKeyConfiguration =
+	| RulePlainConfiguration
+	| RuleWithUseSvelteRequireEachKeyOptions;
 export type UseTestHooksInOrderConfiguration =
 	| RulePlainConfiguration
 	| RuleWithUseTestHooksInOrderOptions;
@@ -6572,6 +6591,10 @@ export interface RuleWithUseStringStartsEndsWithOptions {
 	level: RulePlainConfiguration;
 	options?: UseStringStartsEndsWithOptions;
 }
+export interface RuleWithUseSvelteRequireEachKeyOptions {
+	level: RulePlainConfiguration;
+	options?: UseSvelteRequireEachKeyOptions;
+}
 export interface RuleWithUseTestHooksInOrderOptions {
 	level: RulePlainConfiguration;
 	options?: UseTestHooksInOrderOptions;
@@ -8201,22 +8224,20 @@ export type UseLoneAnonymousOperationOptions = {};
 export type UseLoneExecutableDefinitionOptions = {};
 export type UseMathMinMaxOptions = {};
 export type UseNamedCaptureGroupOptions = {};
+/**
+ * Options for the `useNullishCoalescing` rule.
+ */
 export interface UseNullishCoalescingOptions {
 	/**
-	* Whether to ignore `||` expressions in conditional test positions
-(if/while/for/do-while/ternary conditions).
-
-When `true` (the default), the rule will not report `||` expressions
-that appear in places where the falsy-checking behavior may be intentional.
-
-Default: `true` 
+	 * Ignore `||` expressions in conditional test positions (default: `true`).
 	 */
 	ignoreConditionalTests?: boolean;
 	/**
-	* Whether to ignore ternary expressions that could be simplified
-using the nullish coalescing operator.
-
-Default: `false` 
+	 * Whether to ignore `||` and `||=` binary operations that are part of a mixed logical expression with `&&` (default: `false`).
+	 */
+	ignoreMixedLogicalExpressions?: boolean;
+	/**
+	 * Ignore ternary expressions that check for `null` or `undefined` (default: `false`).
 	 */
 	ignoreTernaryTests?: boolean;
 }
@@ -8257,6 +8278,7 @@ export interface UseSortedClassesOptions {
 }
 export type UseSpreadOptions = {};
 export type UseStringStartsEndsWithOptions = {};
+export type UseSvelteRequireEachKeyOptions = {};
 export type UseTestHooksInOrderOptions = {};
 export type UseTestHooksOnTopOptions = {};
 /**
@@ -9317,6 +9339,7 @@ export type Category =
 	| "lint/nursery/useSortedClasses"
 	| "lint/nursery/useSpread"
 	| "lint/nursery/useStringStartsEndsWith"
+	| "lint/nursery/useSvelteRequireEachKey"
 	| "lint/nursery/useTestHooksInOrder"
 	| "lint/nursery/useTestHooksOnTop"
 	| "lint/nursery/useThisInClassMethods"

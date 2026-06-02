@@ -1441,3 +1441,89 @@ fn lsp_language_hints_keep_svelte_source_module_path_semantics() {
     assert!(js.is_svelte_source_module());
     assert!(!js.is_typescript());
 }
+
+#[test]
+fn fix_file_is_idempotent_for_svelte_template_literal_and_css_block_comment() {
+    // Regression test: reindent_embedded_code was prepending the host
+    // indentation prefix to continuation lines inside template literals and
+    // CSS block comments, so each successive `fix_file` call stacked another
+    // indent layer (non-idempotent).
+    const FILE_PATH: &str = "/project/component.svelte";
+    const FILE_CONTENT: &str = r#"<script>
+	const sql = `
+		SELECT *
+		FROM users
+	`;
+</script>
+
+<style>
+	/*
+	 * A multi-line block comment.
+	 */
+	.foo {
+		color: red;
+	}
+</style>
+"#;
+
+    let fs = MemoryFileSystem::default();
+    fs.insert(Utf8PathBuf::from(FILE_PATH), FILE_CONTENT);
+
+    let (workspace, project_key) = setup_workspace_and_open_project(fs, "/");
+
+    workspace
+        .open_file(OpenFileParams {
+            project_key,
+            path: BiomePath::new(FILE_PATH),
+            content: FileContent::FromServer,
+            document_file_source: None,
+            persist_node_cache: false,
+            inline_config: None,
+        })
+        .unwrap();
+
+    let first = workspace
+        .fix_file(FixFileParams {
+            project_key,
+            path: BiomePath::new(FILE_PATH),
+            fix_file_mode: FixFileMode::SafeFixes,
+            should_format: true,
+            only: vec![],
+            skip: vec![],
+            enabled_rules: vec![],
+            rule_categories: RuleCategories::default(),
+            suppression_reason: None,
+            inline_config: None,
+        })
+        .unwrap();
+
+    workspace
+        .change_file(ChangeFileParams {
+            project_key,
+            path: BiomePath::new(FILE_PATH),
+            content: first.code.clone(),
+            version: 1,
+            inline_config: None,
+        })
+        .unwrap();
+
+    let second = workspace
+        .fix_file(FixFileParams {
+            project_key,
+            path: BiomePath::new(FILE_PATH),
+            fix_file_mode: FixFileMode::SafeFixes,
+            should_format: true,
+            only: vec![],
+            skip: vec![],
+            enabled_rules: vec![],
+            rule_categories: RuleCategories::default(),
+            suppression_reason: None,
+            inline_config: None,
+        })
+        .unwrap();
+
+    assert_eq!(
+        first.code, second.code,
+        "fix_file must be idempotent for Svelte files with template literals and block comments"
+    );
+}

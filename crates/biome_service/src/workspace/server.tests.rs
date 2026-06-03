@@ -1443,27 +1443,32 @@ fn lsp_language_hints_keep_svelte_source_module_path_semantics() {
 }
 
 #[test]
-fn fix_file_is_idempotent_for_svelte_template_literal_and_css_block_comment() {
+fn fix_file_is_idempotent_for_html_template_literal_and_css_block_comment() {
     // Regression test: reindent_embedded_code was prepending the host
     // indentation prefix to continuation lines inside template literals and
-    // CSS block comments, so each successive `fix_file` call stacked another
-    // indent layer (non-idempotent).
-    const FILE_PATH: &str = "/project/component.svelte";
-    const FILE_CONTENT: &str = r#"<script>
-	const sql = `
-		SELECT *
-		FROM users
-	`;
-</script>
-
-<style>
-	/*
-	 * A multi-line block comment.
-	 */
-	.foo {
-		color: red;
-	}
-</style>
+    // CSS/JS block comments, so each successive `fix_file` call stacked another
+    // indent layer (non-idempotent). The HTML file handler (which processes
+    // embedded <script> and <style> blocks via update_snippets) exercises this
+    // code path.
+    const FILE_PATH: &str = "/project/page.html";
+    const FILE_CONTENT: &str = r#"<html>
+	<head>
+		<script>
+		const sql = `
+			SELECT *
+			FROM users
+		`;
+		</script>
+		<style>
+		/*
+		 * A multi-line block comment.
+		 */
+		.foo {
+			color: red;
+		}
+		</style>
+	</head>
+</html>
 "#;
 
     let fs = MemoryFileSystem::default();
@@ -1524,6 +1529,6 @@ fn fix_file_is_idempotent_for_svelte_template_literal_and_css_block_comment() {
 
     assert_eq!(
         first.code, second.code,
-        "fix_file must be idempotent for Svelte files with template literals and block comments"
+        "fix_file must be idempotent for HTML files with template literals and CSS block comments"
     );
 }

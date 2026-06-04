@@ -28,6 +28,8 @@ use biome_configuration::html::{
     HtmlAssistConfiguration, HtmlAssistEnabled, HtmlFormatterConfiguration, HtmlFormatterEnabled,
     HtmlLinterConfiguration, HtmlLinterEnabled, HtmlParseInterpolation, HtmlParserConfiguration,
 };
+use biome_css_parser::{CssParserOptions, parse_css};
+use biome_css_syntax::CssFileSource;
 use biome_css_syntax::CssLanguage;
 use biome_formatter::format_element::{Interned, LineMode};
 use biome_formatter::prelude::{Document, Tag};
@@ -47,8 +49,6 @@ use biome_html_formatter::{
 use biome_html_parser::{HtmlParserOptions, parse_html_with_cache};
 use biome_html_syntax::element_ext::AnyEmbeddedContent;
 use biome_html_syntax::{HtmlFileSource, HtmlLanguage, HtmlRoot, HtmlSyntaxNode};
-use biome_css_parser::{CssParserOptions, parse_css};
-use biome_css_syntax::CssFileSource;
 use biome_js_parser::{JsParserOptions, parse as parse_js};
 use biome_js_syntax::{JsFileSource, JsLanguage, JsTemplateChunkElement};
 use biome_json_syntax::JsonLanguage;

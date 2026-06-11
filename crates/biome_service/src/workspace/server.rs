@@ -666,6 +666,7 @@ impl WorkspaceServer {
 
         // Track value references from non-source snippets (templates)
         let mut value_references = EmbeddedValueReferences::default();
+        let is_svelte = source.to_html_file_source().is_some_and(|s| s.is_svelte());
         for snippet in &embedded_snippets {
             if let Some(js_snippet) = snippet.as_js_embedded_snippet() {
                 let Some(file_source) = self.get_source(snippet.file_source_index()) else {
@@ -674,9 +675,11 @@ impl WorkspaceServer {
                 let Some(js_file_source) = file_source.to_js_file_source() else {
                     continue;
                 };
-                // Only process non-source snippets (templates)
-                if !js_file_source.is_embedded_source() {
-                    let is_svelte = js_file_source.as_embedding_kind().is_svelte();
+                // Templates always; for Svelte also the sibling `<script>` blocks.
+                // A Svelte component's `<script module>` and `<script>` compile to
+                // one module and share a top-level scope, so a binding used only in
+                // the other block must still count as used.
+                if !js_file_source.is_embedded_source() || is_svelte {
                     let mut builder = if is_svelte {
                         value_references.svelte_builder()
                     } else {
@@ -2163,6 +2166,9 @@ impl Workspace for WorkspaceServer {
 
         // Track value references from non-source snippets (templates)
         let mut value_references = EmbeddedValueReferences::default();
+        let is_svelte = document_source
+            .to_html_file_source()
+            .is_some_and(|s| s.is_svelte());
         for snippet in &embedded_snippets {
             if let Some(js_snippet) = snippet.as_js_embedded_snippet() {
                 let Some(file_source) = self.get_source(snippet.file_source_index()) else {
@@ -2171,9 +2177,11 @@ impl Workspace for WorkspaceServer {
                 let Some(js_file_source) = file_source.to_js_file_source() else {
                     continue;
                 };
-                // Only process non-source snippets (templates)
-                if !js_file_source.is_embedded_source() {
-                    let is_svelte = js_file_source.as_embedding_kind().is_svelte();
+                // Templates always; for Svelte also the sibling `<script>` blocks.
+                // A Svelte component's `<script module>` and `<script>` compile to
+                // one module and share a top-level scope, so a binding used only in
+                // the other block must still count as used.
+                if !js_file_source.is_embedded_source() || is_svelte {
                     let mut builder = if is_svelte {
                         value_references.svelte_builder()
                     } else {

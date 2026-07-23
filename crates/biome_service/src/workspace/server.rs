@@ -5,6 +5,10 @@ use crate::diagnostics::{FileTooLarge, NoIgnoreFileFound, VcsDiagnostic};
 use crate::embed::EmbedContent;
 #[cfg(feature = "lang_js")]
 use crate::file_handlers::AstroFileHandler;
+#[cfg(all(feature = "lang_html", feature = "lang_css"))]
+use crate::file_handlers::html::css_verbatim_ranges;
+#[cfg(all(feature = "lang_html", feature = "lang_js"))]
+use crate::file_handlers::html::js_verbatim_ranges;
 use crate::file_handlers::{
     AnalyzerVisitorCache, Capabilities, CodeActionsParams, DiagnosticsAndActionsParams, Features,
     FixAllParams, FixedFileResult, LintParams, LintResults, ParseEmbeddedParams, ParseResult,
@@ -1398,10 +1402,30 @@ impl WorkspaceServerWithDb<'_> {
                 errors += snippet_errors;
                 skipped_suggested_fixes += snippet_skipped_suggested_fixes;
                 if reconstruct_snippet {
+                    let verbatim_ranges = if should_format {
+                        // Use the trimmed code — the same slice passed to
+                        // push_reindented_code — so byte offsets match.
+                        #[allow(unused_variables, unused_mut)]
+                        let trimmed = new_code.trim();
+                        #[allow(unused_mut)]
+                        let mut ranges = Vec::new();
+                        #[cfg(all(feature = "lang_html", feature = "lang_js"))]
+                        if let DocumentFileSource::Js(_) = document_file_source {
+                            ranges = js_verbatim_ranges(trimmed);
+                        }
+                        #[cfg(all(feature = "lang_html", feature = "lang_css"))]
+                        if let DocumentFileSource::Css(_) = document_file_source {
+                            ranges = css_verbatim_ranges(trimmed);
+                        }
+                        ranges
+                    } else {
+                        vec![]
+                    };
                     new_snippets.push(UpdateSnippetsNodes {
                         range: embedded_snippet.element_range(&state.db),
                         new_code,
                         needs_reindent: should_format,
+                        verbatim_ranges,
                     });
                 }
             }
